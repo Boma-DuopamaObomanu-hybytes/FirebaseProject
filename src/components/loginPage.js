@@ -25,33 +25,62 @@ export default function LoginPage() {
   let [inputNumber, setInputNumber] = useState("");
   let [faceMatcher, setFaceMatcher] = useState(null);
   let [isFaceVerified, setIsFaceVerified] = useState(false);
+  let [isCameraOn, setIsCameraOn] = useState(false);
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const db = getFirestore(app);
 
-  useEffect(() => {
-    const startVideo = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-      } catch (error) {
-        console.error("Error accessing webcam:", error);
+
+  const startVideo = async () => {
+    try {
+      loadModels();
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
       }
-    };
+      setIsCameraOn(true);
+    } catch (error) {
+      console.error("Error accessing webcam:", error);
+      alert("Could not access webcam. Please allow camera permissions.");
+    }
+  };
+
+  const stopVideo = () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      let tracks = videoRef.current.srcObject.getTracks();
+      tracks.forEach(track => track.stop());
+    }
+    setIsCameraOn(false);
+  };
   
-    loadModels();
-    startVideo(); // Start the webcam
+
+ 
+    // useEffect(() => {
+    //   const startVideo = async () => {
+    //     try {
+    //       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    //       if (videoRef.current) {
+    //         videoRef.current.srcObject = stream;
+    //       }
+    //     } catch (error) {
+    //       console.error("Error accessing webcam:", error);
+    //     }
+    //   };
+    
+    //   loadModels();
+    //   startVideo(); // Start the webcam
+    
+    //   return () => {
+    //     if (videoRef.current && videoRef.current.srcObject) {
+    //       let tracks = videoRef.current.srcObject.getTracks();
+    //       tracks.forEach(track => track.stop());
+    //     }
+    //   };
+    // }, []);
   
-    return () => {
-      if (videoRef.current && videoRef.current.srcObject) {
-        let tracks = videoRef.current.srcObject.getTracks();
-        tracks.forEach(track => track.stop());
-      }
-    };
-  }, []);
+
+
   
 
   const loadModels = async () => {
@@ -75,7 +104,8 @@ export default function LoginPage() {
   
 
   // Capture and compare face
-  const captureFace = async () => {
+  const findUser = async () => {
+    console.log("Find User button clicked"); // ✅ Debugging Step 1
     try {
       if (!inputEmail) {
         alert("Please enter your email before scanning your face.");
@@ -91,6 +121,7 @@ export default function LoginPage() {
       }
   
       console.log("User data retrieved successfully:", userSnap.data());
+      stopVideo();
     } catch (error) {
       console.error("Error fetching user data:", error);
       alert("Failed to retrieve user data. Check your internet connection.");
@@ -100,6 +131,19 @@ export default function LoginPage() {
   
 
   const registerFace = async () => {
+
+  
+
+    if (!isCameraOn) {
+      await startVideo();
+    }
+
+
+    if (!inputEmail) {
+      alert("Please enter your email before scanning your face.");
+      return;
+    }
+
     const video = videoRef.current;
     if (!video) return;
 
@@ -123,6 +167,7 @@ export default function LoginPage() {
     });
 
     alert("Face registered successfully!");
+    stopVideo();
   };
 
   return (
@@ -171,7 +216,7 @@ export default function LoginPage() {
           <canvas ref={canvasRef} style={{ display: "none" }}></canvas>
         </div>
 
-        <button onClick={captureFace}>Scan Face</button>
+        <button onClick={findUser}>Find User</button>
         <button onClick={registerFace}>Register Face</button>
 
         <div
